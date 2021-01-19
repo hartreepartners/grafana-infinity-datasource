@@ -133,3 +133,8 @@ export const SCRAP_QUERY_RESULT_COLUMN_FORMATS = [
     value: 'timestamp_epoch_s',
   },
 ];
+
+export interface RestVariableQuery {
+  uri: string;
+  columnSelector: string;
+}

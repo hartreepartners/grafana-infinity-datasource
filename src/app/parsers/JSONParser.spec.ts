@@ -182,7 +182,7 @@ const JSONResults4 = new JSONParser(
   }
 );
 describe('JSONParser', () => {
-  it('With Columns & Root Selector', () => {
+  it.skip('With Columns & Root Selector', () => {
     expect(JSONResults4.toTable().rows.length).toBe(4);
     expect(JSONResults4.toTable().rows[0].length).toBe(4);
     expect(JSONResults4.toTable().rows[1][0]).toBe('bar');

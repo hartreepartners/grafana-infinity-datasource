@@ -45,7 +45,11 @@ export class JSONParser extends InfinityParser {
         } else if (c.type === 'timestamp_epoch_s') {
           value = new Date(parseInt(value, 10) * 1000);
         } else if (c.type === 'number') {
-          value = value === '' ? null : +value;
+          if (value === null) {
+            value = NaN;
+          } else {
+            value = value === '' ? null : +value;
+          }
         }
         row.push(value);
       });

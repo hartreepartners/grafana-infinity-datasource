@@ -1,10 +1,11 @@
-import { flatten, chunk, last, sample } from 'lodash';
+// import { flatten, chunk, last, sample } from 'lodash';
+import { flatten } from 'lodash';
 import { DataSourceApi } from '@grafana/data';
-import { getTemplateSrv } from '@grafana/runtime';
+// import { getTemplateSrv } from '@grafana/runtime';
 import { InfinityProvider } from './app/InfinityProvider';
 import { SeriesProvider } from './app/SeriesProvider';
 import { replaceVariables } from './utils';
-import { InfinityQuery, GlobalInfinityQuery } from './types';
+import { InfinityQuery, GlobalInfinityQuery, RestVariableQuery } from './types';
 
 export class Datasource extends DataSourceApi<InfinityQuery> {
   instanceSettings: any;
@@ -32,7 +33,7 @@ export class Datasource extends DataSourceApi<InfinityQuery> {
   query(options: any) {
     const promises: any[] = [];
     options.targets
-      .filter((t: InfinityQuery) => t.hide !== true)
+      // .filter((t: InfinityQuery) => t.hide !== true)
       .forEach((t: InfinityQuery) => {
         if (
           t.type === 'global' &&
@@ -88,83 +89,118 @@ export class Datasource extends DataSourceApi<InfinityQuery> {
       return [];
     });
   }
-  metricFindQuery(query: string) {
+  metricFindQuery(variablequery: RestVariableQuery) {
     const promises: any[] = [];
-    let replacedQuery = getTemplateSrv().replace(query);
-    if (replacedQuery.startsWith('Collection(') && replacedQuery.endsWith(')')) {
-      let actualQuery = replacedQuery.replace('Collection(', '').slice(0, -1);
+    if (variablequery.uri === '' || variablequery.columnSelector === '') {
+      promises.push(new Promise((res, rej) => res([])));
+    } else {
       promises.push(
-        new Promise((resolve, reject) => {
-          let out = chunk(actualQuery.split(','), 2).map(value => {
-            return {
-              text: value[0],
-              value: value[1],
-            };
-          });
-          resolve(out);
-        })
-      );
-    } else if (replacedQuery.startsWith('CollectionLookup(') && replacedQuery.endsWith(')')) {
-      let actualQuery = replacedQuery.replace('CollectionLookup(', '').slice(0, -1);
-      let querySplit = actualQuery.split(',');
-      promises.push(
-        new Promise((resolve, reject) => {
-          let chunkCollection = chunk(querySplit, 2);
-          let out = chunkCollection
-            .slice(0, -1)
-            .map(value => {
-              return {
-                key: value[0],
-                value: value[1],
-              };
-            })
-            .find(v => {
-              return v.key === last(querySplit);
-            });
-          resolve(
-            out
-              ? [
-                  {
-                    text: out.key,
-                    value: out.value,
-                  },
-                ]
-              : []
-          );
-        })
-      );
-    } else if (replacedQuery.startsWith('Join(') && replacedQuery.endsWith(')')) {
-      let actualQuery = replacedQuery.replace('Join(', '').slice(0, -1);
-      let querySplit = actualQuery.split(',');
-      promises.push(
-        new Promise((resolve, reject) => {
-          let out = querySplit.join('');
-          resolve([
+        this.query({
+          targets: [
             {
-              value: out,
-              text: out,
+              type: 'json',
+              source: 'uri',
+              format: 'table',
+              url: variablequery.uri,
+              url_options: {
+                method: 'GET',
+                data: '',
+              },
+              data: '',
+              root_selector: '',
+              columns: [
+                {
+                  text: variablequery.columnSelector,
+                  selector: variablequery.columnSelector,
+                  type: 'string',
+                },
+              ],
             },
-          ]);
+          ],
         })
-      );
-    } else if (replacedQuery.startsWith('Random(') && replacedQuery.endsWith(')')) {
-      let replacedQuery = getTemplateSrv().replace(query, undefined, 'csv');
-      let actualQuery = replacedQuery.replace('Random(', '').slice(0, -1);
-      let querySplit = actualQuery.split(',');
-      promises.push(
-        new Promise((resolve, reject) => {
-          let out = sample(querySplit);
-          resolve([
-            {
-              value: out,
-              text: out,
-            },
-          ]);
-        })
+          .then((results: any) => flatten(results.data))
+          .catch(error => console.log(error))
       );
     }
+    // let replacedQuery = getTemplateSrv().replace(query);
+    // if (replacedQuery.startsWith('Collection(') && replacedQuery.endsWith(')')) {
+    //   let actualQuery = replacedQuery.replace('Collection(', '').slice(0, -1);
+    //   promises.push(
+    //     new Promise((resolve, reject) => {
+    //       let out = chunk(actualQuery.split(','), 2).map(value => {
+    //         return {
+    //           text: value[0],
+    //           value: value[1],
+    //         };
+    //       });
+    //       resolve(out);
+    //     })
+    //   );
+    // } else if (replacedQuery.startsWith('CollectionLookup(') && replacedQuery.endsWith(')')) {
+    //   let actualQuery = replacedQuery.replace('CollectionLookup(', '').slice(0, -1);
+    //   let querySplit = actualQuery.split(',');
+    //   promises.push(
+    //     new Promise((resolve, reject) => {
+    //       let chunkCollection = chunk(querySplit, 2);
+    //       let out = chunkCollection
+    //         .slice(0, -1)
+    //         .map(value => {
+    //           return {
+    //             key: value[0],
+    //             value: value[1],
+    //           };
+    //         })
+    //         .find(v => {
+    //           return v.key === last(querySplit);
+    //         });
+    //       resolve(
+    //         out
+    //           ? [
+    //               {
+    //                 text: out.key,
+    //                 value: out.value,
+    //               },
+    //             ]
+    //           : []
+    //       );
+    //     })
+    //   );
+    // } else if (replacedQuery.startsWith('Join(') && replacedQuery.endsWith(')')) {
+    //   let actualQuery = replacedQuery.replace('Join(', '').slice(0, -1);
+    //   let querySplit = actualQuery.split(',');
+    //   promises.push(
+    //     new Promise((resolve, reject) => {
+    //       let out = querySplit.join('');
+    //       resolve([
+    //         {
+    //           value: out,
+    //           text: out,
+    //         },
+    //       ]);
+    //     })
+    //   );
+    // } else if (replacedQuery.startsWith('Random(') && replacedQuery.endsWith(')')) {
+    //   let replacedQuery = getTemplateSrv().replace(query, undefined, 'csv');
+    //   let actualQuery = replacedQuery.replace('Random(', '').slice(0, -1);
+    //   let querySplit = actualQuery.split(',');
+    //   promises.push(
+    //     new Promise((resolve, reject) => {
+    //       let out = sample(querySplit);
+    //       resolve([
+    //         {
+    //           value: out,
+    //           text: out,
+    //         },
+    //       ]);
+    //     })
+    //   );
+    // }
     return Promise.all(promises).then(results => {
-      return flatten(results);
+      if (results === null || results[0] === null || results[0][0] === null || results[0][0].rows === null) {
+        return [];
+      }
+      const values = results[0][0].rows.map((d: any) => ({ value: d[0], text: d[0] }));
+      return values;
     });
   }
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { defaultsDeep } from 'lodash';
 import { QueryEditorProps } from '@grafana/data';
 import { Datasource } from './datasource';
@@ -6,7 +6,7 @@ import { TypeChooser } from './editors/TypeChooser';
 import { AdvancedOptions } from './editors/AdvancedOptions';
 import { Scrapper as ScrapperOptions } from './editors/Scrapper';
 import { SeriesEditor } from './editors/Series';
-import { InfinityQuery } from './types';
+import { InfinityQuery, RestVariableQuery } from './types';
 
 interface InfinityEditorProps {
   instanceSettings: any;
@@ -67,6 +67,44 @@ export const QueryEditor: React.FC<EditorProps> = props => {
         mode="standard"
         instanceSettings={props.datasource.instanceSettings}
       />
+    </div>
+  );
+};
+
+interface RestVariableQueryProps {
+  query: RestVariableQuery;
+  onChange: (query: RestVariableQuery, definition: string) => void;
+}
+
+export const VariableQueryEditor: React.FC<RestVariableQueryProps> = ({ onChange, query }) => {
+  const [state, setState] = useState(query);
+
+  const saveQuery = () => {
+    onChange(state, `${state.uri} (${state.columnSelector})`);
+  };
+
+  const handleChange = (event: React.FormEvent<HTMLInputElement>) =>
+    setState({
+      ...state,
+      [event.currentTarget.name]: event.currentTarget.value,
+    });
+
+  return (
+    <div>
+      <div className="gf-form">
+        <span className="gf-form-label width-10">uri</span>
+        <input name="uri" className="gf-form-input" onBlur={saveQuery} onChange={handleChange} value={state.uri} />
+      </div>
+      <div className="gf-form">
+        <span className="gf-form-label width-10">columnSelector</span>
+        <input
+          name="columnSelector"
+          className="gf-form-input"
+          onBlur={saveQuery}
+          onChange={handleChange}
+          value={state.columnSelector}
+        />
+      </div>
     </div>
   );
 };
